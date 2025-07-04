@@ -1,0 +1,11 @@
+# Cấu hình xây dựng
+[build]
+  command = "npm run build" # Lệnh để xây dựng trang web
+  publish = "dist"          # Thư mục chứa các tệp đã xây dựng (Vite mặc định là 'dist')
+  
+# Quy tắc chuyển hướng cho các ứng dụng trang đơn (SPA)
+# Điều này đảm bảo React Router xử lý việc định tuyến trên phía máy khách.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

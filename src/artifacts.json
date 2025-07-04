@@ -1,0 +1,36 @@
+{
+  "A123": {
+    "artifact_code": "A123",
+    "title": {
+      "en": "Ancient Vase",
+      "vi": "Bình Cổ",
+      "zh": "古代花瓶"
+    },
+    "description": {
+      "en": "A beautifully preserved vase from the 15th century.",
+      "vi": "Một chiếc bình được bảo quản đẹp đẽ từ thế kỷ 15.",
+      "zh": "一个保存完好的15世纪花瓶。"
+    },
+    "audio_urls": {
+      "en": "/audio/en/A123.mp3",
+      "vi": "/audio/vi/A123.mp3",
+      "zh": null
+    }
+  },
+  "B456": {
+    "artifact_code": "B456",
+    "title": {
+      "en": "Jade Sculpture",
+      "vi": "Tượng Ngọc Bích",
+      "zh": "玉雕"
+    },
+    "description": {
+      "en": "An intricate sculpture carved from a single piece of jade.",
+      "vi": "Một tác phẩm điêu khắc tinh xảo được chạm khắc từ một khối ngọc bích duy nhất.",
+      "zh": "一件由一整块玉石雕刻而成的错综复杂的雕塑。"
+    },
+    "audio_urls": {
+      "en": "https://file-examples.com/storage/fe2351a61626c715b18a74c/2017/11/file_example_MP3_700KB.mp3"
+    }
+  }
+}
