@@ -1,38 +1,53 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import IndexPage from './pages/IndexPage';
+import LoginPage from './pages/LoginPage';
 import AdminUploadPage from './components/AdminUpload';
+import ArtifactManagementPage from './pages/ArtifactManagement';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 import { createPageUrl } from './lib/utils';
 
-function AppContent() {
-  const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith(createPageUrl('adminupload'));
-
-  if (isAdminRoute) {
+// Component Layout cho các trang admin
+function AdminLayout() {
     return (
-      <Layout>
-        <Routes>
-          <Route path={createPageUrl('adminupload')} element={<AdminUploadPage />} />
-        </Routes>
-      </Layout>
-    );
-  }
+        <Layout>
+            <Routes>
+                <Route path="/artifacts" element={<ArtifactManagementPage />} />
+                <Route path="/upload" element={<AdminUploadPage />} />
+            </Routes>
+        </Layout>
+    )
+}
 
-  // Các trang công khai không có Layout admin
+function AppContent() {
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path={createPageUrl('Index')} element={<IndexPage />} />
-      <Route path={createPageUrl('adminupload')} element={<AdminUploadPage />} />
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Protected Admin Routes */}
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

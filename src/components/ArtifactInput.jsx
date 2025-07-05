@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, Hash, ArrowRight, Camera } from 'lucide-react';
+import { Hash, ArrowRight, Home, QrCode as QrCodeIcon } from 'lucide-react'; // Đổi tên để tránh xung đột
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import QrScanner from './QrScanner'; // Import component mới
 
-export default function ArtifactInput({ selectedLanguage, onArtifactSubmit }) {
+export default function ArtifactInput({ selectedLanguage, onArtifactSubmit, onBackToHome }) {
   const [artifactCode, setArtifactCode] = useState('');
-  const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState('');
+  const [isScannerOpen, setIsScannerOpen] = useState(false); // State để điều khiển dialog
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -21,37 +23,46 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit }) {
     onArtifactSubmit(artifactCode.trim().toUpperCase());
   };
 
-  const handleScan = () => {
-    setIsScanning(true);
-    // Simulate QR code scanning
-    setTimeout(() => {
-      const mockCode = 'A123';
-      setArtifactCode(mockCode);
-      setIsScanning(false);
-      onArtifactSubmit(mockCode);
-    }, 2000);
+  // Hàm được gọi khi quét QR thành công
+  const handleScanSuccess = (decodedText, decodedResult) => {
+    console.log(`Scan result: ${decodedText}`, decodedResult);
+    setArtifactCode(decodedText);
+    setIsScannerOpen(false); // Đóng dialog
+    onArtifactSubmit(decodedText.trim().toUpperCase()); // Gửi mã đã quét
   };
 
+  // Hàm được gọi khi có lỗi quét
+  const handleScanError = (errorMessage) => {
+    // Có thể bỏ qua hoặc log lỗi
+    // console.error(errorMessage);
+  };
+  
   const languageNames = {
-    en: 'English',
-    vi: 'Tiếng Việt',
-    zh: '中文'
+    // ... (giữ nguyên languageNames)
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50/30">
       <div className="container mx-auto px-4 py-8">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 bg-amber-100 rounded-full">
+        {/* Header with Back to Home button */}
+        <div className="flex items-center justify-between mb-8">
+          <Button variant="ghost" onClick={onBackToHome} className="flex items-center gap-2 text-slate-600 hover:text-slate-900">
+            <Home className="w-4 h-4" />
+            Home
+          </Button>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full">
             <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
             <span className="text-amber-800 font-medium">
               {languageNames[selectedLanguage]}
             </span>
           </div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
           <h1 className="text-3xl md:text-4xl font-light text-slate-900 mb-4">
             Find Your Artifact
           </h1>
@@ -82,11 +93,7 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit }) {
 
                 <AnimatePresence>
                   {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                       <Alert variant="destructive" className="border-red-200">
                         <AlertDescription>{error}</AlertDescription>
                       </Alert>
@@ -94,10 +101,7 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit }) {
                   )}
                 </AnimatePresence>
 
-                <Button
-                  type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium"
-                >
+                <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium">
                   <ArrowRight className="w-5 h-5 mr-2" />
                   Start Audio Guide
                 </Button>
@@ -111,24 +115,22 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit }) {
 
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardContent className="p-6">
-              <Button
-                variant="outline"
-                onClick={handleScan}
-                disabled={isScanning}
-                className="w-full h-12 border-slate-200 hover:border-amber-400 hover:bg-amber-50"
-              >
-                {isScanning ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Camera className="w-5 h-5 mr-2" />
-                  </motion.div>
-                ) : (
-                  <QrCode className="w-5 h-5 mr-2" />
-                )}
-                {isScanning ? 'Scanning...' : 'Scan QR Code'}
-              </Button>
+              {/* Tích hợp Dialog và Scanner */}
+              <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full h-12 border-slate-200 hover:border-amber-400 hover:bg-amber-50">
+                    <QrCodeIcon className="w-5 h-5 mr-2" />
+                    Scan QR Code
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Scan QR Code</DialogTitle>
+                  </DialogHeader>
+                  {/* Chỉ render QrScanner khi dialog được mở */}
+                  {isScannerOpen && <QrScanner onScanSuccess={handleScanSuccess} onScanError={handleScanError} />}
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         </div>

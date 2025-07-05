@@ -2,44 +2,63 @@ import React, { useState } from 'react';
 import LanguageSelector from '@/components/LanguageSelector';
 import ArtifactInput from '@/components/ArtifactInput';
 import AudioPlayer from '@/components/AudioPlayer';
-import artifactData from '@/data/artifacts.json';
+import { supabase } from '@/lib/supabaseClient'; // Import supabase client
 
 export default function IndexPage() {
   const [selectedLanguage, setSelectedLanguage] = useState(null);
   const [artifactCode, setArtifactCode] = useState(null);
+  const [artifactData, setArtifactData] = useState(null); // Add state for data
 
   const handleLanguageSelect = (langCode) => {
     setSelectedLanguage(langCode);
   };
 
-  const handleArtifactSubmit = (code) => {
-    if (artifactData[code]) {
-      setArtifactCode(code);
-    } else {
+  // Updated function to fetch from Supabase
+  const handleArtifactSubmit = async (code) => {
+    const { data, error } = await supabase
+      .from('AudioGuide')
+      .select('*')
+      .eq('artifact_code', code.toUpperCase())
+      .single(); // .single() gets one record
+
+    if (error || !data) {
       alert(`Artifact with code "${code}" not found.`);
+      setArtifactData(null);
+    } else {
+      setArtifactData(data);
+      setArtifactCode(code.toUpperCase());
     }
   };
 
   const handleBack = () => {
     setArtifactCode(null);
+    setArtifactData(null);
   };
 
   const handleLanguageChange = (newLangCode) => {
     if (newLangCode) {
-         setSelectedLanguage(newLangCode);
-    } else {
-        // Chức năng nút Globe trong trình phát, quay lại chọn ngôn ngữ
-        setSelectedLanguage(null);
-        setArtifactCode(null);
+      setSelectedLanguage(newLangCode);
     }
   };
+
+  const handleBackToHome = () => {
+    setSelectedLanguage(null);
+    setArtifactCode(null);
+    setArtifactData(null);
+  }
 
   if (!selectedLanguage) {
     return <LanguageSelector onLanguageSelect={handleLanguageSelect} />;
   }
 
   if (!artifactCode) {
-    return <ArtifactInput selectedLanguage={selectedLanguage} onArtifactSubmit={handleArtifactSubmit} />;
+    return (
+        <ArtifactInput 
+            selectedLanguage={selectedLanguage} 
+            onArtifactSubmit={handleArtifactSubmit}
+            onBackToHome={handleBackToHome}
+        />
+    );
   }
 
   return (
@@ -48,7 +67,8 @@ export default function IndexPage() {
       artifactCode={artifactCode}
       onLanguageChange={handleLanguageChange}
       onBack={handleBack}
-      artifactData={artifactData[artifactCode]}
+      onBackToHome={handleBackToHome}
+      artifactData={artifactData} // Pass the fetched data
     />
   );
 }
