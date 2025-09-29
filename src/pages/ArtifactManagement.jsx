@@ -6,13 +6,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PlusCircle, FilePenLine } from 'lucide-react';
+// NEW: Import AlertDialog và icon thùng rác
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { PlusCircle, FilePenLine, Trash2 } from 'lucide-react';
 
 export default function ArtifactManagementPage() {
   const [artifacts, setArtifacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingArtifact, setEditingArtifact] = useState(null);
 
+  // ... (phần initialFormData và formData không đổi)
   const initialFormData = {
     artifact_code: '',
     image_url: '',
@@ -23,6 +35,11 @@ export default function ArtifactManagementPage() {
 
   const [formData, setFormData] = useState(initialFormData);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // NEW: State cho chức năng xóa
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [artifactToDelete, setArtifactToDelete] = useState(null);
+
 
   useEffect(() => {
     fetchArtifacts();
@@ -36,6 +53,7 @@ export default function ArtifactManagementPage() {
     setLoading(false);
   };
 
+  // ... (phần handleInputChange, handleEditClick, handleDialogClose không đổi)
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -63,6 +81,7 @@ export default function ArtifactManagementPage() {
   }
 
   const handleSubmit = async (e) => {
+    // ... (logic handleSubmit không đổi)
     e.preventDefault();
     
     const artifactData = {
@@ -100,9 +119,38 @@ export default function ArtifactManagementPage() {
     }
   };
 
+  // NEW: Hàm mở hộp thoại xác nhận xóa
+  const handleDeleteClick = (artifact) => {
+    setArtifactToDelete(artifact);
+    setIsAlertOpen(true);
+  };
+
+  // NEW: Hàm thực hiện xóa sau khi xác nhận
+  const handleConfirmDelete = async () => {
+    if (!artifactToDelete) return;
+
+    const { error } = await supabase
+      .from('AudioGuide')
+      .delete()
+      .eq('id', artifactToDelete.id);
+
+    if (error) {
+      alert('Error deleting artifact: ' + error.message);
+    } else {
+      alert(`Artifact ${artifactToDelete.artifact_code} deleted successfully!`);
+      fetchArtifacts(); // Tải lại danh sách sau khi xóa
+    }
+
+    // Đóng hộp thoại và reset state
+    setIsAlertOpen(false);
+    setArtifactToDelete(null);
+  };
+
+
   return (
     <div className="p-4 sm:p-8">
       <Card>
+        {/* ... (Phần CardHeader và Dialog của Add/Edit không đổi) */}
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Artifact Management</CardTitle>
           <Dialog open={isDialogOpen} onOpenChange={(isOpen) => isOpen ? setIsDialogOpen(true) : handleDialogClose()}>
@@ -181,10 +229,17 @@ export default function ArtifactManagementPage() {
                     <TableCell className="font-medium">{artifact.artifact_code}</TableCell>
                     <TableCell>{artifact.title?.en}</TableCell>
                     <TableCell className="max-w-sm truncate">{artifact.description?.en}</TableCell>
+                    {/* MODIFIED: Thêm nút xóa vào cột Actions */}
                     <TableCell>
-                      <Button variant="outline" size="icon" onClick={() => handleEditClick(artifact)}>
-                        <FilePenLine className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="icon" onClick={() => handleEditClick(artifact)}>
+                          <FilePenLine className="h-4 w-4" />
+                        </Button>
+                        {/* NEW: Nút xóa */}
+                        <Button variant="destructive" size="icon" onClick={() => handleDeleteClick(artifact)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -193,6 +248,23 @@ export default function ArtifactManagementPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* NEW: Hộp thoại xác nhận xóa */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the artifact{' '}
+              <span className="font-bold">{artifactToDelete?.artifact_code}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setArtifactToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

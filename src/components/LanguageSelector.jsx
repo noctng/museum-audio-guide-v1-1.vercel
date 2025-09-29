@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Globe, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react'; // Xóa Globe vì không cần nữa
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -24,11 +24,16 @@ export default function LanguageSelector({ onLanguageSelect }) {
           transition={{ duration: 0.8 }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center gap-3 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center shadow-lg">
-              <Globe className="w-8 h-8 text-white" />
-            </div>
+          {/* ----- THAY ĐỔI Ở ĐÂY ----- */}
+          <div className="mb-6">
+            <img 
+              src="/assets/logoBTCP.png" 
+              alt="Museum Logo" 
+              className="w-24 h-auto mx-auto" 
+            />
           </div>
+          {/* ----- KẾT THÚC THAY ĐỔI ----- */}
+          
           <h1 className="text-4xl md:text-6xl font-light text-slate-900 mb-4 tracking-tight">
             Museum Audio Guide
           </h1>
