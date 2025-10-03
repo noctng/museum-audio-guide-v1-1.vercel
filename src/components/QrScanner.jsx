@@ -1,4 +1,4 @@
-import React, 'react';
+import React from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 // Cấu hình cho trình quét QR
