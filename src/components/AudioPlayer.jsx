@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import QrScanner from './QrScanner';
 
 export default function AudioPlayer({
@@ -16,7 +15,7 @@ export default function AudioPlayer({
   onBack,
   artifactData,
   onBackToHome,
-  onArtifactSubmit,
+  onArtifactSubmit, // thêm prop để xử lý khi quét QR
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -42,7 +41,7 @@ export default function AudioPlayer({
     setCurrentTime(0);
     setDuration(0);
     setIsPlaying(false);
-
+    
     audio.src = audioUrl;
     if (audioUrl) {
       audio.load();
@@ -116,6 +115,7 @@ export default function AudioPlayer({
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  // Handle QR scan success
   const handleScanSuccess = (decodedText) => {
     console.log("Scanned code:", decodedText);
     setIsScannerOpen(false);
@@ -148,22 +148,13 @@ export default function AudioPlayer({
                 Back
               </Button>
 
-              {/* Nút Scan QR với Tooltip */}
+              {/* Nút Scan QR tích hợp trong Header */}
               <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
                 <DialogTrigger asChild>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" className="flex items-center gap-2 text-slate-600 hover:text-slate-900">
-                          <QrCodeIcon className="w-4 h-4" />
-                          Scan QR
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Quét mã hiện vật</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Button variant="ghost" className="flex items-center gap-2 text-slate-600 hover:text-slate-900">
+                    <QrCodeIcon className="w-4 h-4" />
+                    Scan QR
+                  </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
