@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hash, ArrowRight, Home, QrCode as QrCodeIcon } from 'lucide-react'; // Đổi tên để tránh xung đột
+import { Hash, ArrowRight, Home, QrCode as QrCodeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import QrScanner from './QrScanner'; // Import component mới
+import QrScanner from './QrScanner';
 
 export default function ArtifactInput({ selectedLanguage, onArtifactSubmit, onBackToHome }) {
   const [artifactCode, setArtifactCode] = useState('');
   const [error, setError] = useState('');
-  const [isScannerOpen, setIsScannerOpen] = useState(false); // State để điều khiển dialog
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -23,22 +23,20 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit, onBa
     onArtifactSubmit(artifactCode.trim().toUpperCase());
   };
 
-  // Hàm được gọi khi quét QR thành công
   const handleScanSuccess = (decodedText, decodedResult) => {
     console.log(`Scan result: ${decodedText}`, decodedResult);
     setArtifactCode(decodedText);
-    setIsScannerOpen(false); // Đóng dialog
-    onArtifactSubmit(decodedText.trim().toUpperCase()); // Gửi mã đã quét
+    setIsScannerOpen(false);
+    onArtifactSubmit(decodedText.trim().toUpperCase());
   };
 
-  // Hàm được gọi khi có lỗi quét
   const handleScanError = (errorMessage) => {
-    // Có thể bỏ qua hoặc log lỗi
     // console.error(errorMessage);
   };
   
   const languageNames = {
-    // ... (giữ nguyên languageNames)
+    en: 'English', vi: 'Tiếng Việt', zh: '中文', ko: '한국어',
+    ja: '日本語', fr: 'Français', de: 'Deutsch'
   };
 
   return (
@@ -46,23 +44,17 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit, onBa
       <div className="container mx-auto px-4 py-8">
         {/* Header with Back to Home button */}
         <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" onClick={onBackToHome} className="flex items-center gap-2 text-slate-600 hover:text-slate-900">
-            <Home className="w-4 h-4" />
-            Home
-          </Button>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full">
-            <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-            <span className="text-amber-800 font-medium">
-              {languageNames[selectedLanguage]}
-            </span>
-          </div>
+            <Button variant="ghost" onClick={onBackToHome} className="flex items-center gap-2 text-slate-600 hover:text-slate-900">
+                <Home className="w-4 h-4" /> Home
+            </Button>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full">
+                <span className="text-amber-800 font-medium">
+                    {languageNames[selectedLanguage] || 'English'}
+                </span>
+            </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
           <h1 className="text-3xl md:text-4xl font-light text-slate-900 mb-4">
             Find Your Artifact
           </h1>
@@ -72,6 +64,32 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit, onBa
         </motion.div>
 
         <div className="max-w-md mx-auto space-y-6">
+
+          {/* === PHẦN QUÉT MÃ QR (ĐÃ DI CHUYỂN LÊN TRÊN) === */}
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-6">
+              <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full h-12 border-slate-200 hover:border-amber-400 hover:bg-amber-50">
+                    <QrCodeIcon className="w-5 h-5 mr-2" />
+                    Scan QR Code
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Scan QR Code</DialogTitle>
+                  </DialogHeader>
+                  {isScannerOpen && <QrScanner onScanSuccess={handleScanSuccess} onScanError={handleScanError} />}
+                </DialogContent>
+              </Dialog>
+            </CardContent>
+          </Card>
+
+          <div className="text-center text-slate-500">
+            <span className="text-sm">or</span>
+          </div>
+
+          {/* === PHẦN NHẬP MÃ (ĐÃ DI CHUYỂN XUỐNG DƯỚI) === */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardContent className="p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -90,7 +108,6 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit, onBa
                     />
                   </div>
                 </div>
-
                 <AnimatePresence>
                   {error && (
                     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
@@ -100,7 +117,6 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit, onBa
                     </motion.div>
                   )}
                 </AnimatePresence>
-
                 <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium">
                   <ArrowRight className="w-5 h-5 mr-2" />
                   Start Audio Guide
@@ -109,30 +125,6 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit, onBa
             </CardContent>
           </Card>
 
-          <div className="text-center text-slate-500">
-            <span className="text-sm">or</span>
-          </div>
-
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              {/* Tích hợp Dialog và Scanner */}
-              <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full h-12 border-slate-200 hover:border-amber-400 hover:bg-amber-50">
-                    <QrCodeIcon className="w-5 h-5 mr-2" />
-                    Scan QR Code
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Scan QR Code</DialogTitle>
-                  </DialogHeader>
-                  {/* Chỉ render QrScanner khi dialog được mở */}
-                  {isScannerOpen && <QrScanner onScanSuccess={handleScanSuccess} onScanError={handleScanError} />}
-                </DialogContent>
-              </Dialog>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
