@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, RotateCcw, ArrowLeft, AlertCircle, Home } from 'lucide-react';
+import { Play, Pause, RotateCcw, ArrowLeft, AlertCircle, Home, QrCode as QrCodeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import QrScanner from './QrScanner';
 
 export default function AudioPlayer({
   language,
@@ -13,12 +16,14 @@ export default function AudioPlayer({
   onBack,
   artifactData,
   onBackToHome,
+  onArtifactSubmit,
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [audioError, setAudioError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const audioRef = useRef(null);
 
   const audioUrl = artifactData?.audio_urls?.[language] || null;
@@ -37,7 +42,7 @@ export default function AudioPlayer({
     setCurrentTime(0);
     setDuration(0);
     setIsPlaying(false);
-    
+
     audio.src = audioUrl;
     if (audioUrl) {
       audio.load();
@@ -50,34 +55,21 @@ export default function AudioPlayer({
       setDuration(audio.duration);
       setIsLoading(false);
       setAudioError(false);
-      
-      // NEW: Tự động phát nhạc
+
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.then(_ => {
-          // Autoplay đã bắt đầu thành công
           setIsPlaying(true);
         }).catch(error => {
-          // Autoplay bị trình duyệt chặn
           console.error("Autoplay was prevented by the browser:", error);
           setIsPlaying(false);
         });
       }
     };
 
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-    };
-
-    const handleError = () => {
-      setAudioError(true);
-      setIsLoading(false);
-    };
-
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    };
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleError = () => { setAudioError(true); setIsLoading(false); };
+    const handleEnded = () => { setIsPlaying(false); setCurrentTime(0); };
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -124,6 +116,18 @@ export default function AudioPlayer({
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const handleScanSuccess = (decodedText) => {
+    console.log("Scanned code:", decodedText);
+    setIsScannerOpen(false);
+    if (onArtifactSubmit) {
+      onArtifactSubmit(decodedText.trim().toUpperCase());
+    }
+  };
+
+  const handleScanError = (errorMessage) => {
+    console.warn("QR Scan error:", errorMessage);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50/30">
       <div className="container mx-auto px-4 py-8">
@@ -143,7 +147,35 @@ export default function AudioPlayer({
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
+
+              {/* Nút Scan QR với Tooltip */}
+              <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+                <DialogTrigger asChild>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" className="flex items-center gap-2 text-slate-600 hover:text-slate-900">
+                          <QrCodeIcon className="w-4 h-4" />
+                          Scan QR
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Quét mã hiện vật</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Scan Artifact QR Code</DialogTitle>
+                  </DialogHeader>
+                  {isScannerOpen && (
+                    <QrScanner onScanSuccess={handleScanSuccess} onScanError={handleScanError} />
+                  )}
+                </DialogContent>
+              </Dialog>
             </div>
+
             <div className="flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full">
               <span className="text-amber-800 font-medium">{languageNames[language]}</span>
             </div>
