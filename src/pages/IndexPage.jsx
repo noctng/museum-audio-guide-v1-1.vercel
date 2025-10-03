@@ -69,6 +69,7 @@ export default function IndexPage() {
       onBack={handleBack}
       onBackToHome={handleBackToHome}
       artifactData={artifactData} // Pass the fetched data
+      onArtifactSubmit={handleArtifactSubmit}
     />
   );
 }
