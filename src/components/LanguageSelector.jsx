@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/lib/supabaseClient'; // ✅ Kết nối Supabase
+import { supabase } from '@/lib/supabaseClient';
 
 const languages = [
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
@@ -16,41 +16,75 @@ const languages = [
 ];
 
 export default function LanguageSelector({ onLanguageSelect }) {
-  const [visits, setVisits] = useState(null);
+  const [visits, setVisits] = useState(null);      // Tổng lượt truy cập
+  const [activeUsers, setActiveUsers] = useState(0); // Người đang online
+  const [sessionId] = useState(() => crypto.randomUUID()); // Mỗi người 1 ID tạm
 
-  // ✅ Lấy và tăng số lượt truy cập
+  // ✅ Khi vào trang → tăng lượt truy cập
   useEffect(() => {
     async function updateVisits() {
-      try {
-        // Lấy lượt truy cập hiện tại
-        const { data: record, error: fetchError } = await supabase
-          .from('page_visits')
-          .select('count')
-          .eq('page', 'home')
-          .maybeSingle();
+      const { data: record } = await supabase
+        .from('page_visits')
+        .select('count')
+        .eq('page', 'home')
+        .maybeSingle();
 
-        if (fetchError) console.warn('Fetch error:', fetchError);
+      const newCount = (record?.count || 0) + 1;
 
-        const newCount = (record?.count || 0) + 1;
+      await supabase.from('page_visits').upsert({
+        page: 'home',
+        count: newCount,
+        updated_at: new Date().toISOString(),
+      });
 
-        // Cập nhật lại vào bảng
-        const { error: updateError } = await supabase
-          .from('page_visits')
-          .upsert({
-            page: 'home',
-            count: newCount,
-            updated_at: new Date().toISOString(),
-          });
-
-        if (updateError) console.error('Update error:', updateError);
-
-        setVisits(newCount);
-      } catch (err) {
-        console.error('Supabase error:', err);
-      }
+      setVisits(newCount);
     }
 
     updateVisits();
+  }, []);
+
+  // ✅ Ghi nhận người đang online (khi mở tab)
+  useEffect(() => {
+    const addSession = async () => {
+      await supabase.from('active_sessions').insert({ id: sessionId, page: 'home' });
+    };
+    const removeSession = async () => {
+      await supabase.from('active_sessions').delete().eq('id', sessionId);
+    };
+
+    addSession();
+    window.addEventListener('beforeunload', removeSession);
+
+    return () => {
+      removeSession();
+      window.removeEventListener('beforeunload', removeSession);
+    };
+  }, [sessionId]);
+
+  // ✅ Lắng nghe realtime thay đổi số người đang online
+  useEffect(() => {
+    async function countActiveUsers() {
+      const { count } = await supabase
+        .from('active_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('page', 'home');
+
+      setActiveUsers(count || 0);
+    }
+
+    countActiveUsers();
+
+    // Lắng nghe realtime (thêm / xóa session)
+    const channel = supabase
+      .channel('active_sessions_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'active_sessions' }, () => {
+        countActiveUsers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (
@@ -63,11 +97,7 @@ export default function LanguageSelector({ onLanguageSelect }) {
           className="text-center mb-12"
         >
           <div className="mb-6">
-            <img
-              src="/assets/logoBTCP.png"
-              alt="Museum Logo"
-              className="w-24 h-auto mx-auto"
-            />
+            <img src="/assets/logoBTCP.png" alt="Museum Logo" className="w-24 h-auto mx-auto" />
           </div>
 
           <h1 className="text-4xl md:text-6xl font-light text-slate-900 mb-4 tracking-tight">
@@ -78,6 +108,7 @@ export default function LanguageSelector({ onLanguageSelect }) {
           </p>
         </motion.div>
 
+        {/* Danh sách ngôn ngữ */}
         <div className="max-w-2xl mx-auto">
           <div className="grid gap-4">
             {languages.map((language, index) => (
@@ -114,6 +145,7 @@ export default function LanguageSelector({ onLanguageSelect }) {
           </div>
         </div>
 
+        {/* Footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -126,12 +158,11 @@ export default function LanguageSelector({ onLanguageSelect }) {
             <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
           </div>
 
-          {/* ✅ Hiển thị số lượt truy cập */}
-          {visits !== null && (
-            <div className="mt-2 text-slate-500">
-              👁️ {visits.toLocaleString()} lượt truy cập
-            </div>
-          )}
+          {/* ✅ Hiển thị lượt truy cập và người đang online */}
+          <div className="mt-2 text-slate-500">
+            👁️ {visits !== null ? visits.toLocaleString() : '...'} lượt truy cập <br />
+            🟢 {activeUsers} người đang truy cập
+          </div>
         </motion.div>
       </div>
     </div>
