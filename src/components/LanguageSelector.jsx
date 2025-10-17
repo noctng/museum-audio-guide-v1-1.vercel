@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react'; // Xóa Globe vì không cần nữa
+import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { supabase } from '@/lib/supabaseClient'; // ✅ Kết nối Supabase
 
 const languages = [
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
@@ -15,6 +16,43 @@ const languages = [
 ];
 
 export default function LanguageSelector({ onLanguageSelect }) {
+  const [visits, setVisits] = useState(null);
+
+  // ✅ Lấy và tăng số lượt truy cập
+  useEffect(() => {
+    async function updateVisits() {
+      try {
+        // Lấy lượt truy cập hiện tại
+        const { data: record, error: fetchError } = await supabase
+          .from('page_visits')
+          .select('count')
+          .eq('page', 'home')
+          .maybeSingle();
+
+        if (fetchError) console.warn('Fetch error:', fetchError);
+
+        const newCount = (record?.count || 0) + 1;
+
+        // Cập nhật lại vào bảng
+        const { error: updateError } = await supabase
+          .from('page_visits')
+          .upsert({
+            page: 'home',
+            count: newCount,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (updateError) console.error('Update error:', updateError);
+
+        setVisits(newCount);
+      } catch (err) {
+        console.error('Supabase error:', err);
+      }
+    }
+
+    updateVisits();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50/30">
       <div className="container mx-auto px-4 py-8">
@@ -24,16 +62,14 @@ export default function LanguageSelector({ onLanguageSelect }) {
           transition={{ duration: 0.8 }}
           className="text-center mb-12"
         >
-          {/* ----- THAY ĐỔI Ở ĐÂY ----- */}
           <div className="mb-6">
-            <img 
-              src="/assets/logoBTCP.png" 
-              alt="Museum Logo" 
-              className="w-24 h-auto mx-auto" 
+            <img
+              src="/assets/logoBTCP.png"
+              alt="Museum Logo"
+              className="w-24 h-auto mx-auto"
             />
           </div>
-          {/* ----- KẾT THÚC THAY ĐỔI ----- */}
-          
+
           <h1 className="text-4xl md:text-6xl font-light text-slate-900 mb-4 tracking-tight">
             Museum Audio Guide
           </h1>
@@ -89,6 +125,13 @@ export default function LanguageSelector({ onLanguageSelect }) {
             <span>Premium Museum Experience</span>
             <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
           </div>
+
+          {/* ✅ Hiển thị số lượt truy cập */}
+          {visits !== null && (
+            <div className="mt-2 text-slate-500">
+              👁️ {visits.toLocaleString()} lượt truy cập
+            </div>
+          )}
         </motion.div>
       </div>
     </div>
