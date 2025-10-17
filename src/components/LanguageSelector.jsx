@@ -161,7 +161,7 @@ export default function LanguageSelector({ onLanguageSelect }) {
           {/* ✅ Hiển thị lượt truy cập và người đang online */}
           <div className="mt-2 text-slate-500">
             👁️ {visits !== null ? visits.toLocaleString() : '...'} lượt truy cập <br />
-            🟢 {activeUsers} người đang truy cập
+            🟢 {activeUsers} người đã truy cập
           </div>
         </motion.div>
       </div>
