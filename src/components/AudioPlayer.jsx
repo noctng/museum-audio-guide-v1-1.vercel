@@ -54,7 +54,7 @@ const PlayerHeader = React.memo(({ language, onBackToHome, onBack, onArtifactSub
 // Component Con 2: Lựa chọn ngôn ngữ (Phần tĩnh)
 // ================================================================
 const LanguageOptions = React.memo(({ currentLanguage, onLanguageChange }) => {
-  const languageNames = { en: 'English', vi: 'Tiếng Việt', zh: '中文', ko: '한국어', ja: '日本語', fr: 'Français', de: 'Deutsch' };
+  const languageNames = { en: 'English', vi: 'Tiếng Việt', zh: '中文', ru: 'Русский', ko: '한국어', ja: '日本語', fr: 'Français', de: 'Deutsch' };
   
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
