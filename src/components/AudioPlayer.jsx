@@ -26,7 +26,7 @@ const PlayerHeader = React.memo(({ language, onBackToHome, onBack, onArtifactSub
     console.warn("QR Scan error:", errorMessage);
   }, []);
 
-  const languageNames = { en: 'English', vi: 'Tiếng Việt', zh: '中文', ko: '한국어', ja: '日本語', fr: 'Français', de: 'Deutsch' };
+  const languageNames = { en: 'English', vi: 'Tiếng Việt', zh: '中文', ru: 'Русский', ko: '한국어', ja: '日本語', fr: 'Français', de: 'Deutsch' };
 
   return (
     <div className="flex items-center justify-between mb-8">
