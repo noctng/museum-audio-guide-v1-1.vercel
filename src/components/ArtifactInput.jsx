@@ -36,7 +36,7 @@ export default function ArtifactInput({ selectedLanguage, onArtifactSubmit, onBa
   
   const languageNames = {
     en: 'English', vi: 'Tiếng Việt', zh: '中文', ru: 'Русский',
-    ko: '한국어', ja: '日本語', fr: 'Français', de: 'Deutsch'
+    ko: '한국어', ja: '日本語', fr: 'Français', de: 'Deutsch' , es: 'Español'
   };
 
   return (
