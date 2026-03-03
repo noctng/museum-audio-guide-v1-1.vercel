@@ -27,9 +27,9 @@ export default function ArtifactManagementPage() {
   const initialFormData = {
     artifact_code: '',
     image_url: '',
-    title_en: '', title_vi: '', title_zh: '', title_ru: '', title_ko: '', title_ja: '', title_fr: '', title_de: '',
-    desc_en: '', desc_vi: '', desc_zh: '', desc_ru: '', desc_ko: '', desc_ja: '', desc_fr: '', desc_de: '',
-    audio_en: '', audio_vi: '', audio_zh: '', audio_ru: '', audio_ko: '', audio_ja: '', audio_fr: '', audio_de: '',
+    title_en: '', title_vi: '', title_zh: '', title_ru: '', title_ko: '', title_ja: '', title_fr: '', title_de: '', title_ds: '',
+    desc_en: '', desc_vi: '', desc_zh: '', desc_ru: '', desc_ko: '', desc_ja: '', desc_fr: '', desc_de: '', desc_ds: '',
+    audio_en: '', audio_vi: '', audio_zh: '', audio_ru: '', audio_ko: '', audio_ja: '', audio_fr: '', audio_de: '', audio_ds: '',
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -60,11 +60,11 @@ export default function ArtifactManagementPage() {
       artifact_code: artifact.artifact_code,
       image_url: artifact.image_url || '',
       title_en: artifact.title?.en || '', title_vi: artifact.title?.vi || '', title_zh: artifact.title?.zh || '', title_ru: artifact.title?.ru || '',
-      title_ko: artifact.title?.ko || '', title_ja: artifact.title?.ja || '', title_fr: artifact.title?.fr || '', title_de: artifact.title?.de || '',
+      title_ko: artifact.title?.ko || '', title_ja: artifact.title?.ja || '', title_fr: artifact.title?.fr || '', title_de: artifact.title?.de || '', title_ds: artifact.title?.ds || '',
       desc_en: artifact.description?.en || '', desc_vi: artifact.description?.vi || '', desc_zh: artifact.description?.zh || '', desc_ru: artifact.description?.ru || '',
-      desc_ko: artifact.description?.ko || '', desc_ja: artifact.description?.ja || '', desc_fr: artifact.description?.fr || '', desc_de: artifact.description?.de || '',
+      desc_ko: artifact.description?.ko || '', desc_ja: artifact.description?.ja || '', desc_fr: artifact.description?.fr || '', desc_de: artifact.description?.de || '', desc_ds: artifact.description?.ds || '',
       audio_en: artifact.audio_urls?.en || '', audio_vi: artifact.audio_urls?.vi || '', audio_zh: artifact.audio_urls?.zh || '', audio_ru: artifact.audio_urls?.ru || '',
-      audio_ko: artifact.audio_urls?.ko || '', audio_ja: artifact.audio_urls?.ja || '', audio_fr: artifact.audio_urls?.fr || '', audio_de: artifact.audio_urls?.de || '',
+      audio_ko: artifact.audio_urls?.ko || '', audio_ja: artifact.audio_urls?.ja || '', audio_fr: artifact.audio_urls?.fr || '', audio_de: artifact.audio_urls?.de || '', audio_ds: artifact.audio_urls?.ds || '',
     });
     setIsDialogOpen(true);
   };
@@ -82,15 +82,15 @@ export default function ArtifactManagementPage() {
       image_url: formData.image_url,
       title: {
         en: formData.title_en, vi: formData.title_vi, zh: formData.title_zh,
-        ko: formData.title_ko, ru: formData.title_ru, ja: formData.title_ja, fr: formData.title_fr, de: formData.title_de,
+        ko: formData.title_ko, ru: formData.title_ru, ja: formData.title_ja, fr: formData.title_fr, de: formData.title_de, ds: formData.title_ds,
       },
       description: {
         en: formData.desc_en, vi: formData.desc_vi, zh: formData.desc_zh,
-        ru: formData.desc_ru, ko: formData.desc_ko, ja: formData.desc_ja, fr: formData.desc_fr, de: formData.desc_de,
+        ru: formData.desc_ru, ko: formData.desc_ko, ja: formData.desc_ja, fr: formData.desc_fr, de: formData.desc_de, ds: formData.desc_ds,
       },
       audio_urls: {
         en: formData.audio_en, vi: formData.audio_vi, zh: formData.audio_zh,
-        ru: formData.audio_ru, ko: formData.audio_ko, ja: formData.audio_ja, fr: formData.audio_fr, de: formData.audio_de,
+        ru: formData.audio_ru, ko: formData.audio_ko, ja: formData.audio_ja, fr: formData.audio_fr, de: formData.audio_de, ds: formData.audio_ds,
       }
     };
 
@@ -190,6 +190,7 @@ export default function ArtifactManagementPage() {
                   <Input name="title_ja" placeholder="Japanese" value={formData.title_ja} onChange={handleInputChange}/>
                   <Input name="title_fr" placeholder="French" value={formData.title_fr} onChange={handleInputChange}/>
                   <Input name="title_de" placeholder="German" value={formData.title_de} onChange={handleInputChange}/>
+                  <Input name="title_ds" placeholder="Español" value={formData.title_ds} onChange={handleInputChange}/>
                 </div>
 
                 <h3 className='font-semibold mt-4 border-b pb-2'>Description</h3>
@@ -202,6 +203,7 @@ export default function ArtifactManagementPage() {
                   <Textarea name="desc_ja" placeholder="Japanese Description" value={formData.desc_ja} onChange={handleInputChange}/>
                   <Textarea name="desc_fr" placeholder="French Description" value={formData.desc_fr} onChange={handleInputChange}/>
                   <Textarea name="desc_de" placeholder="German Description" value={formData.desc_de} onChange={handleInputChange}/>
+                  <Textarea name="desc_ds" placeholder="Español Description" value={formData.desc_ds} onChange={handleInputChange}/>
                 </div>
 
                 <h3 className='font-semibold mt-4 border-b pb-2'>Audio URLs</h3>
@@ -214,6 +216,7 @@ export default function ArtifactManagementPage() {
                   <Input name="audio_ja" placeholder="Japanese Audio URL" value={formData.audio_ja} onChange={handleInputChange}/>
                   <Input name="audio_fr" placeholder="French Audio URL" value={formData.audio_fr} onChange={handleInputChange}/>
                   <Input name="audio_de" placeholder="German Audio URL" value={formData.audio_de} onChange={handleInputChange}/>
+                  <Input name="audio_ds" placeholder="Español Audio URL" value={formData.audio_ds} onChange={handleInputChange}/>
                 </div>
 
                 <div className="mt-4 flex justify-end">
