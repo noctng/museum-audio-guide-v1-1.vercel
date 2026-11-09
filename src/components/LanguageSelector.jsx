@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/lib/supabaseClient';
+import { fetchVisitStats, fetchActiveUsers } from '@/lib/tracking';
 
 const languages = [
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
@@ -18,74 +18,26 @@ const languages = [
 ];
 
 export default function LanguageSelector({ onLanguageSelect }) {
-  const [visits, setVisits] = useState(null);      // Tổng lượt truy cập
-  const [activeUsers, setActiveUsers] = useState(0); // Người đang online
-  const [sessionId] = useState(() => crypto.randomUUID()); // Mỗi người 1 ID tạm
+  const [visits, setVisits] = useState(null);          // Tổng lượt truy cập (cả site)
+  const [activeUsers, setActiveUsers] = useState(0);   // Người đang online (cả site)
 
-  // ✅ Khi vào trang → tăng lượt truy cập
+  // ✅ Chỉ ĐỌC số liệu (việc ghi lượt truy cập/session đã dời lên IndexPage)
   useEffect(() => {
-    async function updateVisits() {
-      const { data: record } = await supabase
-        .from('page_visits')
-        .select('count')
-        .eq('page', 'home')
-        .maybeSingle();
+    let disposed = false;
 
-      const newCount = (record?.count || 0) + 1;
-
-      await supabase.from('page_visits').upsert({
-        page: 'home',
-        count: newCount,
-        updated_at: new Date().toISOString(),
-      });
-
-      setVisits(newCount);
-    }
-
-    updateVisits();
-  }, []);
-
-  // ✅ Ghi nhận người đang online (khi mở tab)
-  useEffect(() => {
-    const addSession = async () => {
-      await supabase.from('active_sessions').insert({ id: sessionId, page: 'home' });
-    };
-    const removeSession = async () => {
-      await supabase.from('active_sessions').delete().eq('id', sessionId);
+    const refresh = async () => {
+      const [visitStats, active] = await Promise.all([fetchVisitStats(), fetchActiveUsers()]);
+      if (disposed) return;
+      setVisits(Object.values(visitStats).reduce((sum, count) => sum + (count || 0), 0));
+      setActiveUsers(active.total);
     };
 
-    addSession();
-    window.addEventListener('beforeunload', removeSession);
+    refresh();
+    const timer = setInterval(refresh, 30000); // làm mới số liệu mỗi 30 giây
 
     return () => {
-      removeSession();
-      window.removeEventListener('beforeunload', removeSession);
-    };
-  }, [sessionId]);
-
-  // ✅ Lắng nghe realtime thay đổi số người đang online
-  useEffect(() => {
-    async function countActiveUsers() {
-      const { count } = await supabase
-        .from('active_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('page', 'home');
-
-      setActiveUsers(count || 0);
-    }
-
-    countActiveUsers();
-
-    // Lắng nghe realtime (thêm / xóa session)
-    const channel = supabase
-      .channel('active_sessions_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'active_sessions' }, () => {
-        countActiveUsers();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+      disposed = true;
+      clearInterval(timer);
     };
   }, []);
 
@@ -163,7 +115,7 @@ export default function LanguageSelector({ onLanguageSelect }) {
           {/* ✅ Hiển thị lượt truy cập và người đang online */}
           <div className="mt-2 text-slate-500">
             👁️ {visits !== null ? visits.toLocaleString() : '...'} lượt truy cập <br />
-            🟢 {activeUsers} người đã truy cập
+            🟢 {activeUsers} người đang truy cập
           </div>
         </motion.div>
       </div>

@@ -3,7 +3,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, Headphones, Package, RefreshCw, Globe2, BarChart3, TrendingUp } from 'lucide-react';
+import { Eye, Headphones, Package, RefreshCw, Globe2, BarChart3, TrendingUp, UserCheck } from 'lucide-react';
+import { ACTIVE_WINDOW_MS, PAGE_LABELS } from '@/lib/tracking';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -52,8 +53,9 @@ const tooltipStyle = {
 };
 
 export default function DashboardPage() {
-  const [visits, setVisits] = useState(null);          // Tổng lượt truy cập
-  const [listenEvents, setListenEvents] = useState([]); // Danh sách lượt nghe
+  const [visitsByPage, setVisitsByPage] = useState({});   // Lượt truy cập theo trang { home: 12, ... }
+  const [activeUsers, setActiveUsers] = useState({ total: 0, byPage: {} }); // Đang online
+  const [listenEvents, setListenEvents] = useState([]);   // Danh sách lượt nghe
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -62,21 +64,35 @@ export default function DashboardPage() {
     setLoading(true);
     setError(null);
 
-    // Tổng lượt truy cập
-    const [{ data: visitData, error: visitError }, { data: listenData, error: listenError }] =
-      await Promise.all([
-        supabase.from('page_visits').select('count').eq('page', 'home').maybeSingle(),
-        supabase.from('listen_events')
-          .select('artifact_code, language, created_at')
-          .order('created_at', { ascending: false })
-          .limit(50000),
-      ]);
+    const [{ data: visitRows, error: visitError },
+           { data: activeRows, error: activeError },
+           { data: listenRows, error: listenError }] = await Promise.all([
+      // Lượt truy cập theo từng trang
+      supabase.from('page_visits').select('page, count'),
+      // Session có ping trong 5 phút gần nhất = đang online
+      supabase.from('active_sessions')
+        .select('page')
+        .gte('last_seen', new Date(Date.now() - ACTIVE_WINDOW_MS).toISOString()),
+      // Danh sách lượt nghe
+      supabase.from('listen_events')
+        .select('artifact_code, language, created_at')
+        .order('created_at', { ascending: false })
+        .limit(50000),
+    ]);
 
     if (visitError) setError(prev => prev || visitError.message);
+    if (activeError) setError(prev => prev || activeError.message);
     if (listenError) setError(prev => prev || listenError.message);
 
-    if (visitData) setVisits(visitData.count);
-    if (listenData) setListenEvents(listenData);
+    if (visitRows) {
+      setVisitsByPage(Object.fromEntries(visitRows.map(r => [r.page, r.count || 0])));
+    }
+    if (activeRows) {
+      const byPage = {};
+      activeRows.forEach(r => { byPage[r.page] = (byPage[r.page] || 0) + 1; });
+      setActiveUsers({ total: activeRows.length, byPage });
+    }
+    if (listenRows) setListenEvents(listenRows);
     setLastUpdated(new Date());
     setLoading(false);
   }, []);
@@ -89,6 +105,23 @@ export default function DashboardPage() {
 
   // ===== Thống kê tổng quan =====
   const stats = useMemo(() => {
+    // --- Truy cập ---
+    const totalVisits = Object.values(visitsByPage).reduce((s, c) => s + (c || 0), 0);
+
+    // Danh sách các trang có dữ liệu (gộp cả tracking cũ lẫn mới)
+    const pageKeys = [...new Set([
+      ...Object.keys(PAGE_LABELS),
+      ...Object.keys(visitsByPage),
+      ...Object.keys(activeUsers.byPage),
+    ])];
+    const pageRows = pageKeys.map(page => ({
+      page,
+      label: PAGE_LABELS[page] || `Trang khác (${page})`,
+      visits: visitsByPage[page] || 0,
+      online: activeUsers.byPage[page] || 0,
+    })).sort((a, b) => b.visits - a.visits);
+
+    // --- Lượt nghe ---
     const totalListens = listenEvents.length;
     const byLanguage = {};   // { en: 12, vi: 8, ... }
     const byArtifact = {};   // { A001: { total, languages: {en: 3, ...} } }
@@ -143,8 +176,8 @@ export default function DashboardPage() {
       listens: a.total,
     }));
 
-    return { totalListens, languageList, languagePie, artifactList, topArtifacts, trend, topLanguage, uniqueArtifacts };
-  }, [listenEvents]);
+    return { totalVisits, pageRows, totalListens, languageList, languagePie, artifactList, topArtifacts, trend, topLanguage, uniqueArtifacts };
+  }, [visitsByPage, activeUsers, listenEvents]);
 
   const formatTime = (d) =>
     d ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
@@ -174,18 +207,25 @@ export default function DashboardPage() {
             Lỗi tải dữ liệu: {error}
             <br />
             <span className="text-xs">
-              Nếu lỗi liên quan đến RLS, hãy chạy file <code>supabase/dashboard_stats.sql</code> trong Supabase SQL Editor.
+              Nếu lỗi liên quan đến RLS, hãy chạy các file <code>supabase/tracking_fixes.sql</code> và <code>supabase/dashboard_stats.sql</code> trong Supabase SQL Editor.
             </span>
           </CardContent>
         </Card>
       )}
 
       {/* Thẻ tổng quan */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           icon={<Eye className="w-5 h-5 text-blue-600" />}
           label="Tổng lượt truy cập"
-          value={visits !== null ? visits.toLocaleString() : (loading ? '...' : '0')}
+          value={stats.totalVisits.toLocaleString()}
+          sub={`Trang chủ: ${(visitsByPage.home || 0).toLocaleString()}`}
+        />
+        <StatCard
+          icon={<UserCheck className="w-5 h-5 text-green-600" />}
+          label="Đang truy cập"
+          value={activeUsers.total.toLocaleString()}
+          sub={`Trong ${ACTIVE_WINDOW_MS / 60000} phút gần nhất`}
         />
         <StatCard
           icon={<Headphones className="w-5 h-5 text-amber-600" />}
@@ -204,6 +244,48 @@ export default function DashboardPage() {
           sub={stats.topLanguage ? `${stats.topLanguage.count.toLocaleString()} lượt nghe` : null}
         />
       </div>
+
+      {/* Truy cập & online theo trang */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">🧭 Truy cập &amp; đang online theo trang</CardTitle>
+          <p className="text-sm text-slate-500">"Đang online" = có hoạt động trong {ACTIVE_WINDOW_MS / 60000} phút gần nhất.</p>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Trang</TableHead>
+                <TableHead className="text-right">Tổng lượt truy cập</TableHead>
+                <TableHead className="text-right">Đang online</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {stats.pageRows.map(row => (
+                <TableRow key={row.page}>
+                  <TableCell className="font-medium">{row.label}</TableCell>
+                  <TableCell className="text-right">{row.visits.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">
+                    {row.online > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 text-green-700 font-medium">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        {row.online.toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">0</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow className="bg-slate-50 font-semibold">
+                <TableCell>Cộng</TableCell>
+                <TableCell className="text-right">{stats.totalVisits.toLocaleString()}</TableCell>
+                <TableCell className="text-right text-green-700">{activeUsers.total.toLocaleString()}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Xu hướng lượt nghe theo ngày */}
       <Card>
