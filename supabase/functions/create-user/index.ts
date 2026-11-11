@@ -52,17 +52,40 @@ Deno.serve(async (req) => {
     const caller = userData.user
 
     // ---- 2) Kiểm tra role = admin trong bảng profiles ----
-    const { data: profile, error: profileError } = await callerClient
+    // Tra theo id trước; nếu không thấy (hồ sơ tạo tay id sai) thì tra theo email
+    const callerEmail = (caller.email || '').toLowerCase()
+
+    const { data: profileById, error: byIdError } = await callerClient
       .from('profiles')
       .select('role')
       .eq('id', caller.id)
-      .single()
+      .maybeSingle()
 
-    if (profileError || !profile) {
-      return json(403, { error: 'Không xác định được quyền của bạn (không tìm thấy hồ sơ)' })
+    let profileRole = profileById?.role
+    let profileSource = 'id'
+
+    if (!profileRole && !byIdError) {
+      const { data: profileByEmail } = await callerClient
+        .from('profiles')
+        .select('role')
+        .eq('email', callerEmail)
+        .maybeSingle()
+      if (profileByEmail) {
+        profileRole = profileByEmail.role
+        profileSource = 'email'
+      }
     }
-    if (profile.role !== 'admin') {
-      return json(403, { error: 'Chỉ quản trị (admin) mới được tạo tài khoản' })
+
+    if (!profileRole) {
+      return json(403, {
+        error: `Không tìm thấy hồ sơ quyền cho ${callerEmail}. Hãy chạy file supabase/profiles_repair.sql trong Supabase SQL Editor để đồng bộ hồ sơ với tài khoản Auth.`,
+      })
+    }
+
+    if (profileRole !== 'admin') {
+      return json(403, {
+        error: `Chỉ quản trị (admin) mới được tạo tài khoản. Hồ sơ hiện tại của bạn (${profileSource === 'email' ? 'tra theo email' : 'tra theo id'}) có role = '${profileRole}'. Nếu bạn là admin, chạy supabase/profiles_repair.sql để gán quyền.`,
+      })
     }
 
     // ---- 3) Đọc & kiểm tra dữ liệu đầu vào ----
