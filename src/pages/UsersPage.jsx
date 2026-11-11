@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseUrl } from '@/lib/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -40,55 +40,51 @@ export default function UsersPage() {
     setCreating(true);
     setMessage(null);
 
-    // 1) Tạo tài khoản trong Supabase Auth
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/login` },
-    });
+    // 1) Lấy JWT của admin đang đăng nhập
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+      setMessage({ type: 'error', text: 'Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.' });
+      setCreating(false);
+      return;
+    }
 
-    if (signUpError) {
+    // 2) Gọi Edge Function create-user (chỉ admin mới được phép — kiểm tra phía server)
+    let res;
+    try {
+      res = await fetch(`${supabaseUrl}/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ email, password, role }),
+      });
+    } catch (networkError) {
       setMessage({
         type: 'error',
-        text:
-          signUpError.status === 422 || /registered/i.test(signUpError.message)
-            ? `Email ${email} đã được đăng ký.`
-            : `Không tạo được tài khoản: ${signUpError.message}`,
+        text: 'Không kết nối được máy chủ. Edge Function "create-user" có thể chưa được triển khai (chạy: supabase functions deploy create-user).',
       });
       setCreating(false);
       return;
     }
 
-    // 2) Nếu Supabase yêu cầu xác nhận email => chưa có session
-    if (!data.session) {
-      setMessage({
-        type: 'warn',
-        text: `Đã tạo tài khoản ${email}, nhưng đang bật xác nhận email nên nhân viên phải mở link trong hộp thư để kích hoạt. (Mẹo: tắt "Confirm email" trong Supabase Dashboard → Authentication để kích hoạt ngay.)`,
-      });
-      setEmail('');
-      setPassword('');
+    const result = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setMessage({ type: 'error', text: result.error || `Không tạo được tài khoản (mã ${res.status}).` });
       setCreating(false);
       return;
     }
 
-    // 3) Ghi hồ sơ vào bảng profiles
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      email: data.user.email,
-      role,
-    });
-
-    if (profileError) {
-      setMessage({
-        type: 'error',
-        text: `Tài khoản đã tạo nhưng chưa ghi được hồ sơ: ${profileError.message}. Hãy chạy file supabase/profiles_rls.sql trong Supabase SQL Editor.`,
-      });
+    if (result.warning) {
+      setMessage({ type: 'warn', text: result.warning });
     } else {
       setMessage({ type: 'success', text: `✅ Đã tạo tài khoản ${email} (${role === 'admin' ? 'Quản trị' : 'Nhân viên'})` });
       setEmail('');
       setPassword('');
-      fetchUsers();
     }
+    fetchUsers();
     setCreating(false);
   };
 
@@ -184,8 +180,8 @@ export default function UsersPage() {
             </div>
           </form>
           <p className="text-xs text-slate-400 mt-3">
-            Lưu ý: để khoá quyền truy cập của một nhân viên, hãy đổi mật khẩu hoặc xoá tài khoản trong
-            Supabase Dashboard → Authentication → Users (vì lý do bảo mật, việc xoá tài khoản Auth không thể thực hiện từ trang này).
+            Tài khoản được tạo qua Edge Function an toàn (service key phía server, email kích hoạt ngay). Để chặn hoàn toàn việc tự đăng ký từ bên ngoài,
+            hãy tắt <strong>"Allow new users to sign up"</strong> trong Supabase Dashboard → Authentication → Sign In / Providers → Email.
           </p>
         </CardContent>
       </Card>
