@@ -45,7 +45,11 @@ export default function AdminUploadPage() {
       }
     } catch (err) {
       console.error('Upload error:', err);
-      setError('An error occurred during upload. Please try again.');
+      setError(
+        err?.message
+          ? `Upload thất bại: ${err.message}`
+          : 'An error occurred during upload. Please try again.'
+      );
     } finally {
       setIsUploading(false);
     }
