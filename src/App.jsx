@@ -9,6 +9,7 @@ import UsersPage from './pages/UsersPage';
 const DashboardPage = lazy(() => import('./pages/DashboardPage')); // code-split: chỉ tải khi vào /admin/dashboard
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleGate from './components/RoleGate';
 import { createPageUrl } from './lib/utils';
 
 // Component Layout cho các trang admin
@@ -18,9 +19,10 @@ function AdminLayout() {
             <Suspense fallback={<div className="p-8 text-slate-500">Đang tải...</div>}>
               <Routes>
                 <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/artifacts" element={<ArtifactManagementPage />} />
-                <Route path="/users" element={<UsersPage />} />
-                <Route path="/upload" element={<AdminUploadPage />} />
+                {/* Các trang dưới đây chỉ dành cho admin — staff bị đẩy về Dashboard */}
+                <Route path="/artifacts" element={<RoleGate><ArtifactManagementPage /></RoleGate>} />
+                <Route path="/users" element={<RoleGate><UsersPage /></RoleGate>} />
+                <Route path="/upload" element={<RoleGate><AdminUploadPage /></RoleGate>} />
               </Routes>
             </Suspense>
         </Layout>

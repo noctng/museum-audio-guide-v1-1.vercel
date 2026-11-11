@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
-import { createPageUrl } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext'; // Import useAuthimport { createPageUrl } from '@/lib/utils';
 import { Home, UploadCloud, ListVideo, LogOut, BarChart3, Users } from 'lucide-react'; // Import LogOut
 import { Button } from './ui/button';
 
@@ -35,7 +34,10 @@ const navigationItems = [
 export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth(); // Lấy hàm signOut
+  const { signOut, isAdmin, user } = useAuth(); // Lấy hàm signOut + quyền
+
+  // Nhân viên chỉ thấy Dashboard; admin thấy toàn bộ
+  const visibleItems = isAdmin ? navigationItems : navigationItems.filter(i => i.url === '/admin/dashboard');
 
   const handleLogout = async () => {
     await signOut();
@@ -47,12 +49,13 @@ export default function Layout({ children }) {
       <nav className="w-64 bg-white border-r border-slate-200 p-4 flex flex-col">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Museum Guide</h1>
-          <p className="text-sm text-slate-500">Admin Panel</p>
+          <p className="text-sm text-slate-500">{isAdmin ? 'Admin Panel' : 'Báo cáo thống kê'}</p>
+          {user?.email && <p className="text-xs text-slate-400 mt-1 truncate">{user.email}</p>}
         </div>
 
         <div className="space-y-2 mt-8 flex-1">
             <nav className="space-y-2">
-              {navigationItems.map((item) => {
+              {visibleItems.map((item) => {
                 const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + '/');
                 return (
                   <Link
