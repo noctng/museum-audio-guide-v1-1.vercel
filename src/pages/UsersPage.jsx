@@ -10,6 +10,9 @@ export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);          // Người xem có phải admin?
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(null); // Lý do bị chặn vào trang
 
   // Form tạo tài khoản mới
   const [email, setEmail] = useState('');
@@ -34,6 +37,68 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  // Chỉ admin mới được vào trang này (kể cả staff đăng nhập cũng bị chặn)
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setAccessDenied('Không xác định được phiên đăng nhập, hãy đăng nhập lại.');
+        return;
+      }
+      setCurrentUserEmail((user.email || '').toLowerCase());
+
+      // Tra quyền: theo id trước, không thấy thì tra theo email
+      let { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+      if (!profile) {
+        const { data: byEmail } = await supabase.from('profiles').select('role').eq('email', (user.email || '').toLowerCase()).maybeSingle();
+        profile = byEmail;
+      }
+      setIsAdmin(profile?.role === 'admin');
+      if (!profile) setAccessDenied('Không tìm thấy hồ sơ quyền của bạn. Chạy supabase/profiles_repair.sql để đồng bộ hồ sơ.');
+      else if (profile.role !== 'admin') setAccessDenied('Chỉ quản trị (admin) mới có quyền truy cập trang này.');
+    })();
+  }, []);
+
+  // Đổi quyền của 1 tài khoản
+  const handleRoleChange = async (user, newRole) => {
+    if (!newRole || newRole === user.role) return;
+
+    // Chặn việc tự đổi quyền của chính mình nếu đây là admin duy nhất
+    if ((user.email || '').toLowerCase() === currentUserEmail) {
+      const otherAdmins = users.filter(u =>
+        u.email !== user.email && (u.role || '').trim() === 'admin'
+      );
+      if (newRole !== 'admin' && otherAdmins.length === 0) {
+        setMessage({
+          type: 'error',
+          text: 'Bạn là quản trị duy nhất — không thể tự hạ quyền, nếu không sẽ không ai quản lý được tài khoản nữa.',
+        });
+        return;
+      }
+      const ok = window.confirm(`Bạn sắp tự đổi quyền của chính mình thành "${newRole === 'admin' ? 'Quản trị' : 'Nhân viên'}". Tiếp tục?`);
+      if (!ok) return;
+    }
+
+    // Cập nhật theo email (an toàn kể cả khi id hồ sơ chưa đồng bộ)
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('email', (user.email || '').toLowerCase());
+
+    if (updateError) {
+      setMessage({
+        type: 'error',
+        text: `Không đổi được quyền: ${updateError.message}. Nếu lỗi RLS, hãy chạy file supabase/profiles_rls.sql trong Supabase SQL Editor.`,
+      });
+    } else {
+      setMessage({
+        type: 'success',
+        text: `✅ Đã đổi quyền của ${user.email} thành ${newRole === 'admin' ? 'Quản trị' : 'Nhân viên'}`,
+      });
+      fetchUsers();
+    }
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -90,6 +155,23 @@ export default function UsersPage() {
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+  // 🚫 Chặn trang nếu không phải admin
+  if (accessDenied) {
+    return (
+      <div className="p-4 sm:p-8">
+        <Card className="border-red-300 bg-red-50">
+          <CardContent className="p-6 flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-red-600 shrink-0" />
+            <div className="text-sm text-red-700">
+              <p className="font-semibold mb-1">Không có quyền truy cập</p>
+              <p>{accessDenied}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
@@ -214,23 +296,35 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.email}</TableCell>
-                    <TableCell>
-                      <span className={
-                        `inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                          user.role === 'admin'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'bg-blue-100 text-blue-700'
-                        }`
-                      }>
-                        {user.role === 'admin' ? 'Quản trị' : 'Nhân viên'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-slate-500">{formatDate(user.created_at)}</TableCell>
-                  </TableRow>
-                ))}
+                {users.map((user) => {
+                  const cleanRole = (user.role || 'staff').trim();
+                  const isSelf = (user.email || '').toLowerCase() === currentUserEmail;
+                  return (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
+                        {user.email}
+                        {isSelf && (
+                          <span className="ml-2 text-xs text-amber-600 font-medium">(bạn)</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <select
+                          value={cleanRole}
+                          onChange={(e) => handleRoleChange(user, e.target.value)}
+                          className={`h-8 rounded-md border px-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                            cleanRole === 'admin'
+                              ? 'border-purple-200 bg-purple-50 text-purple-700'
+                              : 'border-blue-200 bg-blue-50 text-blue-700'
+                          }`}
+                        >
+                          <option value="admin">Quản trị (toàn quyền)</option>
+                          <option value="staff">Nhân viên (xem báo cáo)</option>
+                        </select>
+                      </TableCell>
+                      <TableCell className="text-slate-500">{formatDate(user.created_at)}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
