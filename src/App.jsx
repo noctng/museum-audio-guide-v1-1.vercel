@@ -5,6 +5,7 @@ import IndexPage from './pages/IndexPage';
 import LoginPage from './pages/LoginPage';
 import AdminUploadPage from './components/AdminUpload';
 import ArtifactManagementPage from './pages/ArtifactManagement';
+import UsersPage from './pages/UsersPage';
 const DashboardPage = lazy(() => import('./pages/DashboardPage')); // code-split: chỉ tải khi vào /admin/dashboard
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -18,6 +19,7 @@ function AdminLayout() {
               <Routes>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/artifacts" element={<ArtifactManagementPage />} />
+                <Route path="/users" element={<UsersPage />} />
                 <Route path="/upload" element={<AdminUploadPage />} />
               </Routes>
             </Suspense>

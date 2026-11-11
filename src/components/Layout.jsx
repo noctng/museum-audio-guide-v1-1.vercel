@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext'; // Import useAuth
 import { createPageUrl } from '@/lib/utils';
-import { Home, UploadCloud, ListVideo, LogOut, BarChart3 } from 'lucide-react'; // Import LogOut
+import { Home, UploadCloud, ListVideo, LogOut, BarChart3, Users } from 'lucide-react'; // Import LogOut
 import { Button } from './ui/button';
 
 const navigationItems = [
@@ -16,6 +16,12 @@ const navigationItems = [
     title: 'Artifacts',
     url: '/admin/artifacts', // New URL
     icon: ListVideo,          // New Icon
+    section: 'admin'
+  },
+  {
+    title: 'Tài khoản',
+    url: '/admin/users',
+    icon: Users,
     section: 'admin'
   },
   {
